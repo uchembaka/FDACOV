@@ -1,0 +1,164 @@
+%% Simulate Data
+M =50;
+Sigma = zeros(M, M);
+t = linspace(0, 1, 50);
+for i = 1:50
+    for j = 1:i
+        Sigma(i, j) = 20 * exp(-(2*sin(pi*(t(i)-t(j))/.75).^2)/5 );
+        Sigma(j, i) = Sigma(i, j);
+    end
+end
+
+mu = (4.*t.^3 + 6.*t.^2 - 12.*t);
+
+subplot(1,2,1)
+surf(t, t, Sigma)
+subplot(1,2,2)
+plot(t, mu)
+
+X = mvnrnd(mu, Sigma, 100); %truth
+subplot(3,3,1)
+surf(t, t, cov(X))
+subplot(3,3,2)
+plot(t, mean(X))
+subplot(3,3,3)
+plot(t, X(1:5,:))
+
+rng('default')
+Y = X + normrnd(0,1,100, 50); %dense
+subplot(3,3,4)
+surf(t, t, cov(Y))
+subplot(3,3,5)
+plot(t, mean(Y))
+subplot(3,3,6)
+plot(t, Y(1:5,:))
+
+Y_sp = Y; %sparse
+for i = 1:100
+    Y_sp(i, randsample(50, 50-randsample(15:25, 1))) = nan;
+end
+subplot(3,3,7)
+surf(t, t, cov(Y_sp, 'partialrows'))
+subplot(3,3,8)
+plot(t, mean(Y_sp, 'omitnan'))
+subplot(3,3,9)
+plot(t, Y_sp(1:5,:), '-o')
+
+data.X = X; data.Y = Y; data.Y_sp = Y_sp; data.Sigma = Sigma; data.mu = mu;
+data.grid = t; data.iDTY = mat2iDTY(data.Y, data.grid);
+data.iDTYsp = mat2iDTY(data.Y_sp, data.grid);
+
+%% LRCOV
+% Dense estimations
+tic
+[R, sig2, OUTs] = LRCov(data.iDTY);
+toc
+subplot(1,2,1)
+surf(OUTs.RRTx)
+subplot(1,2,2)
+surf(cov(data.X))
+rmse(OUTs.RRTx,cov(data.X), 'all')
+
+% Sparse estimations
+[R, sig2, OUTs] = LRCov(data.iDTYsp);
+subplot(1,2,1)
+surf(OUTs.RRTx)
+subplot(1,2,2)
+surf(cov(data.X))
+rmse(OUTs.RRTx,cov(data.X), 'all')
+
+% use LLK
+[R, sig2, OUTs] = LRCov(data.iDTYsp,[], [], [], [], 1, [], [], [], [], [], 0);
+subplot(1,2,1)
+surf(OUTs.RRTx)
+subplot(1,2,2)
+surf(cov(data.X))
+
+rmse(OUTs.RRTx,cov(data.X), 'all')
+
+% Example Paper Sims
+% Update folder path
+load('...\Data\Can_temp_35x52_1.mat')
+[R, sig2, OUTs] = LRCov(mat2iDTY(sim_data.Y));
+rmse(OUTs.RRTx, cov(sim_data.X), 'all')
+
+load('...\Data\eggcrate_50x50_1.mat')
+[R, sig2, OUTs] = LRCov(mat2iDTY(sim_data.Y));
+rmse(OUTs.RRTx, cov(sim_data.X), 'all')
+
+load('...\Data\matern_50x50_1.mat')
+[R, sig2, OUTs] = LRCov(mat2iDTY(sim_data.Y));
+rmse(OUTs.RRTx, cov(sim_data.X), 'all')
+
+
+
+%% CholCov
+% Dense estimations
+[L, sig2, OUTs] = PDCov(data.Y);
+subplot(2,2,1)
+surf(OUTs.LLTx)
+subplot(2,2,2)
+surf(cov(data.X))
+subplot(2,2,3)
+surf(L) 
+subplot(2,2,4)
+surf(chol(cov(data.X) + eye(50).*1e-6)')
+rmse(OUTs.LLTx, cov(data.X), 'all')
+% Sparse estimations
+[L, sig2, OUTs] = PDCov(data.Y_sp);
+subplot(2,2,1)
+surf(OUTs.LLTx)
+subplot(2,2,2)
+surf(cov(data.X))
+subplot(2,2,3)
+surf(L) 
+subplot(2,2,4)
+surf(chol(cov(data.X) + eye(50).*1e-6)')
+rmse(OUTs.LLTx, cov(data.X), 'all')
+
+
+% Examples from Paper sims
+% Update folder path
+load('...\Data\Can_temp_35x52_1.mat')
+[L, sig2, OUTs] = PDCov(sim_data.Y);
+rmse(OUTs.LLTx, cov(sim_data.X), 'all')
+
+load('...\Data\eggcrate_50x50_1.mat')
+[L, sig2, OUTs] = PDCov(sim_data.Y);
+rmse(OUTs.LLTx, cov(sim_data.X), 'all')
+
+load('...\Data\matern_50x50_1.mat')
+[L, sig2, OUTs] = PDCov(sim_data.Y);
+rmse(OUTs.LLTx, cov(sim_data.X), 'all')
+
+%% Irreg and Sparse for LRCov
+
+M = 50; n = 50;
+k = 1:3; t = linspace(0, 1, M);
+D = diag(0.5.^(k-1));
+sp_grids = cell(n, 1);
+for i = 1:n
+    sp_grids{i} = sort(round(rand(randi([5,15], 1),1), 4));
+end
+all_t = union(vertcat(sp_grids{:})', t);
+
+big_mu = 5*sin(2*pi*all_t);
+big_U = [sqrt(2)*sin(2*pi*all_t)', sqrt(2)*cos(4*pi*all_t)', sqrt(2)*sin(4*pi*all_t)'];
+big_Sigma = big_U*D*big_U';
+big_X = mvnrnd(big_mu, big_Sigma, n); %truth
+rng('default')
+big_Y = big_X + normrnd(0,1,n, length(all_t)); %dense
+t_ind = ismember(all_t, t);
+X = big_X(:,t_ind);
+Y = big_Y(:,t_ind);
+
+Y_sp = cell(n, 1);
+Y_iDTY = [];
+for i = 1:n
+    ti = sp_grids{i};
+    ni = length(ti);
+    Y_sp{i} = big_Y(i, ismember(all_t, ti));
+    Y_iDTY = [Y_iDTY; [repelem(i, ni)', sp_grids{i}, Y_sp{i}']];
+end
+
+[R, sig2, OUTs] = LRCov(data.iDTYsp,[], [], [], [], 1, [], [], [], [], [], 0);
