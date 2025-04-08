@@ -1,5 +1,33 @@
 function [R, sig2, OUTs] = LRCov(data, r, p, lambda, basis_type, omega, isSparse, mu_nbasis, nRegGrid, W, dispIter, LSQ)
 
+% LRCov function for estimating smooth covariance surface,
+
+% inputs
+% data: \sum_i^n m_i x 3 matrix (obsID, time, observation) 
+
+% r: Rank size
+
+% p: Number of basis functions
+
+% lambda: Smoothing parameter
+
+% basis_type: Type of basis function. Can be 'bspline' or 'fourier'.
+% (Default is bspline).
+
+% omega: For selecting p automatically. 
+
+% isSparse: Logical for if data is sparse;
+
+% mu_nbasis: Number of basis used to estimate the mean function.
+
+% nRegGrid: Output fixed grid size if data is irregular.
+
+% W: Weights for improving estimate. The default is Null.
+
+% dispIter: Logical for displaying optimization iteration.
+
+% LSQ: Logical to use Least Squares loss for sparse and/or irregular data
+
 if nargin < 2 || isempty(r)
     r = [];
 end
