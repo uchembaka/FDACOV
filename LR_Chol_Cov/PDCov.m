@@ -3,20 +3,20 @@ function [L, sig2, OUTs] = PDCov(data, lambda1, lambda2, k, covmat, BW, err, dia
 
 % inputs
 % data: nxM matrix with n subjects and M size grid points. The matrix can
-% be sparse
+% be sparse or an MxM sample covariance matrix
 
-% k: Number of basis of the first column of the Cholesky factor
+% k: Number of the basis of the first column of the Cholesky factor
 
-% covmat: Logical for if data is a covariance matrix. Default is 0 (data
+% covmat: Logical for if data is a covariance matrix. The default is 0 (data
 % matrix)
 
-% BW: Specify bandwidth for banded estimate. Default is M
+% BW: Specify the bandwidth for a banded estimate. Default is M
 
-% err: Logical for if data includes error. Default is 1
+% err: Logical for if data includes an error. Default is 1
 
 % diag_cvec0: Initial value for diagonal coefs. If a single number, it's
-% repeated M times otherwise should be vector of size M. Default is
-% log(0.01)
+% repeated M times otherwise, it should be a vector of size M. Default is
+% log(0.05)
 
 % isSparse: Logical for if datamat is sparse;
 
